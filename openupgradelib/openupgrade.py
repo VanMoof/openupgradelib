@@ -861,6 +861,13 @@ def rename_models(cr, model_spec):
                 'UPDATE ir_act_server SET model_name = %s '
                 'WHERE model_name = %s', (new, old,),
             )
+        if column_exists(cr, 'ir_cron', 'model'):
+            # model is replaced by model_id in 11.0
+            logged_query(
+                cr,
+                'UPDATE ir_model SET model = %s '
+                'WHERE model = %s', (new, old,),
+            )
         if is_module_installed(cr, 'email_template'):
             if table_exists(cr, 'email_template') and column_exists(
                     cr, 'email_template', 'model'):
