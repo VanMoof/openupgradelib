@@ -594,12 +594,25 @@ def rename_fields(env, field_spec, no_deep=False):
                 # Remnant of old versions? We rename existing one
                 rename_columns(cr, {table: [(new_field, None)]})
             rename_columns(cr, {table: [(old_field, new_field)]})
-        # Delete possible existing field entry
+        # Raise if the new entry already exists, mentioning the workaround.
         # Example: https://github.com/OCA/OpenUpgrade/issues/2339
         cr.execute(
-            """DELETE FROM ir_model_fields WHERE name = %s AND model = %s""",
+            """SELECT COUNT(*) FROM ir_model_fields
+            WHERE name = %s AND model = %s
+            """,
             (new_field, model),
         )
+        if cr.fetchone()[0]:
+            do_raise(
+                "When renaming field %s of model %s to %s, an existing field "
+                "with the new name was encountered. This could be a "
+                "error in a migration script, or a remnant from a previous "
+                "upgrade or an uninstalled module. In the latter case, you "
+                "can remove the entry manually, or try to run \"UPDATE "
+                "ir_module_data SET noupdate = FALSE WHERE noupdate IS "
+                "NULL;\" on your database and upgrade all modules on the "
+                "version of Odoo that you were running before."
+                % (old_field, model, new_field))
         # Rename corresponding field entry
         cr.execute("""
             UPDATE ir_model_fields
